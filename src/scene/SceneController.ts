@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createBarLabel, createLabelTexture, headColors, palette, tokenColor } from './textures'
 
 export type SceneData = {
@@ -57,6 +58,8 @@ export class SceneController {
   private residualGroup = new THREE.Group()
   private logitsGroup = new THREE.Group()
   private sampleGroup = new THREE.Group()
+  private columnGroup = new THREE.Group()
+  private attentionBeadGroup = new THREE.Group()
   private particleGroup: THREE.Points | null = null
   private tokenMeshes: Array<THREE.Mesh> = []
   private towerMeshes: Array<THREE.Mesh> = []
@@ -70,6 +73,12 @@ export class SceneController {
   private frame = 0
   private selected: Selection = null
   private selectionCallback?: (selection: Selection) => void
+  private userInteractCallback?: () => void
+  private viewModeCallback?: (mode: 'follow' | 'free') => void
+  private controls: OrbitControls
+  private userControlling = false
+  private pointerDown = new THREE.Vector2()
+  private pointerMoved = false
   private resizeObserver: ResizeObserver
   private disposed = false
   private reducedMotion = false
@@ -80,6 +89,8 @@ export class SceneController {
   private flowPulses: THREE.Mesh[] = []
   private sampleOrb: THREE.Mesh | null = null
   private samplePath: THREE.QuadraticBezierCurve3 | null = null
+  private columnNodes: THREE.Mesh[][] = [[], [], [], []]
+  private attentionBeads: Array<{ mesh: THREE.Mesh; curve: THREE.QuadraticBezierCurve3; offset: number }> = []
   private canvas: HTMLCanvasElement
 
   constructor(
@@ -88,10 +99,14 @@ export class SceneController {
       onSelect?: (selection: Selection) => void
       onTokenHover?: (index: number | null) => void
       reducedMotion?: boolean
+      onUserInteract?: () => void
+      onViewModeChange?: (mode: 'follow' | 'free') => void
     } = {},
   ) {
     this.canvas = canvas
     this.selectionCallback = options.onSelect
+    this.userInteractCallback = options.onUserInteract
+    this.viewModeCallback = options.onViewModeChange
     this.reducedMotion = options.reducedMotion ?? false
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' })
     const mobile = window.matchMedia('(max-width: 720px)').matches
@@ -103,6 +118,8 @@ export class SceneController {
 
     this.scene.background = new THREE.Color(palette.paper)
     this.scene.fog = new THREE.Fog(palette.paper, 44, 92)
+    this.camera.position.copy(this.cameraPosition)
+    this.camera.lookAt(this.cameraTarget)
     this.scene.add(
       this.tokenGroup,
       this.towerGroup,
@@ -112,6 +129,8 @@ export class SceneController {
       this.residualGroup,
       this.logitsGroup,
       this.sampleGroup,
+      this.columnGroup,
+      this.attentionBeadGroup,
     )
 
     this.buildLights()
@@ -123,10 +142,37 @@ export class SceneController {
     this.resizeObserver = new ResizeObserver(() => this.resize())
     this.resizeObserver.observe(canvas)
     this.resize()
+    canvas.addEventListener('wheel', this.handleWheel, { capture: true, passive: true })
+    this.controls = new OrbitControls(this.camera, canvas)
+    this.controls.target.copy(this.cameraTarget)
+    this.controls.enableDamping = true
+    this.controls.dampingFactor = 0.075
+    this.controls.enablePan = false
+    this.controls.minDistance = 9
+    this.controls.maxDistance = 72
+    this.controls.minPolarAngle = 0.16
+    this.controls.maxPolarAngle = Math.PI * 0.49
+    this.controls.rotateSpeed = 0.62
+    this.controls.zoomSpeed = 0.78
+    this.controls.addEventListener('start', this.handleOrbitStart)
     canvas.addEventListener('pointerdown', this.handlePointer)
     canvas.addEventListener('pointermove', this.handleHover)
+    canvas.addEventListener('pointerup', this.handlePointerUp)
     this.setChapter(0)
     this.renderer.setAnimationLoop(this.tick)
+  }
+
+  private handleOrbitStart = () => {
+    if (!this.userControlling) {
+      this.userControlling = true
+      this.viewModeCallback?.('free')
+      this.userInteractCallback?.()
+    }
+  }
+
+  private handleWheel = (event: WheelEvent) => {
+    // Keep the page scrollable. Hold Ctrl to zoom the 3D camera instead.
+    if (!event.ctrlKey) event.stopImmediatePropagation()
   }
 
   private buildLights() {
@@ -235,13 +281,13 @@ export class SceneController {
     )
     spine.position.set(0, 7.4, -1.35)
     this.scene.add(spine)
-    const pulseColors = [palette.blue, palette.amber, palette.violet]
-    for (let index = 0; index < 3; index += 1) {
+    const pulseColors = [palette.blue, palette.amber, palette.violet, palette.green]
+    for (let index = 0; index < 7; index += 1) {
       const pulse = new THREE.Mesh(
         new THREE.SphereGeometry(0.11, 18, 18),
         new THREE.MeshStandardMaterial({
-          color: pulseColors[index],
-          emissive: pulseColors[index],
+          color: pulseColors[index % pulseColors.length],
+          emissive: pulseColors[index % pulseColors.length],
           emissiveIntensity: 0.6,
           transparent: true,
           opacity: 0.85,
@@ -341,6 +387,51 @@ export class SceneController {
       const label = group.children.find((child) => (child as THREE.Sprite).isSprite) as THREE.Sprite | undefined
       if (label) label.position.set(-((this.worldWidth + 4) / 2) + 1.6, 2.9 + index * 3, 1.35)
     })
+    this.rebuildColumns()
+    const inputLabel = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: createBarLabel('INPUT TOKENS', '#526273'),
+        transparent: true,
+        depthWrite: false,
+      }),
+    )
+    inputLabel.position.set(0, 0.08, 2.2)
+    inputLabel.scale.set(3.4, 0.55, 1)
+    this.tokenGroup.add(inputLabel)
+  }
+
+  private rebuildColumns() {
+    disposeObject(this.columnGroup)
+    this.columnGroup.clear()
+    this.columnNodes = [[], [], [], []]
+    this.tokenX.forEach((x, tokenIndex) => {
+      const token = this.data.tokens[tokenIndex] ?? ' '
+      const color = new THREE.Color(tokenColor(token))
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(x, 1.02, 0.02),
+          new THREE.Vector3(x, 12.25, 0.02),
+        ]),
+        new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.13 }),
+      )
+      this.columnGroup.add(line)
+      for (let layer = 0; layer < 4; layer += 1) {
+        const node = new THREE.Mesh(
+          new THREE.SphereGeometry(0.062, 14, 14),
+          new THREE.MeshStandardMaterial({
+            color,
+            emissive: color,
+            emissiveIntensity: 0.25,
+            roughness: 0.25,
+            transparent: true,
+            opacity: 0.92,
+          }),
+        )
+        node.position.set(x, 2.9 + layer * 3, 0.02)
+        this.columnNodes[layer].push(node)
+        this.columnGroup.add(node)
+      }
+    })
   }
 
   private rebuildQkv() {
@@ -399,10 +490,14 @@ export class SceneController {
   private rebuildAttention() {
     disposeObject(this.attentionGroup)
     this.attentionGroup.clear()
+    disposeObject(this.attentionBeadGroup)
+    this.attentionBeadGroup.clear()
+    this.attentionBeads = []
     const layer = this.data.attention[this.attentionLayer]
     if (!layer || !this.tokenX.length) return
     const positions: number[] = []
     const colors: number[] = []
+    const candidates: Array<{ curve: THREE.QuadraticBezierCurve3; weight: number; color: THREE.Color }> = []
     layer.forEach((head, headIndex) => {
       const base = new THREE.Color(headColors[headIndex % headColors.length])
       const y = 2.9 + this.attentionLayer * 3 + 0.9
@@ -415,6 +510,7 @@ export class SceneController {
           mid.y += 1.7 + weight * 2.6
           mid.z += 1.6 + headIndex * 0.45
           const curve = new THREE.QuadraticBezierCurve3(start, mid, end)
+          if (weight > 0.06) candidates.push({ curve, weight, color: base.clone() })
           const points = curve.getPoints(10)
           for (let i = 0; i < points.length - 1; i += 1) {
             positions.push(points[i].x, points[i].y, points[i].z, points[i + 1].x, points[i + 1].y, points[i + 1].z)
@@ -435,6 +531,23 @@ export class SceneController {
       depthWrite: false,
     })
     this.attentionGroup.add(new THREE.LineSegments(geometry, material))
+    candidates
+      .sort((left, right) => right.weight - left.weight)
+      .slice(0, 16)
+      .forEach((candidate, index) => {
+        const bead = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06 + candidate.weight * 0.08, 12, 12),
+          new THREE.MeshStandardMaterial({
+            color: candidate.color,
+            emissive: candidate.color,
+            emissiveIntensity: 0.85,
+            transparent: true,
+            opacity: 0.9,
+          }),
+        )
+        this.attentionBeadGroup.add(bead)
+        this.attentionBeads.push({ mesh: bead, curve: candidate.curve, offset: index / 16 })
+      })
   }
 
   private rebuildResidual() {
@@ -550,11 +663,21 @@ export class SceneController {
       this.sampleGroup.add(halo)
       this.sampleOrb = orb
     }
+    const nextTokenLabel = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: createBarLabel('NEXT TOKEN', '#5b438d'),
+        transparent: true,
+        depthWrite: false,
+      }),
+    )
+    nextTokenLabel.position.set(0, 14.1, 1.6)
+    nextTokenLabel.scale.set(2.8, 0.5, 1)
+    this.logitsGroup.add(nextTokenLabel)
   }
 
   setChapter(value: number) {
     this.chapterTarget = clamp(value, 0, cameraKeyframes.length - 1)
-    const layer = this.chapterTarget >= 2.5 ? Math.min(3, Math.max(0, Math.round(this.chapterTarget) - 3)) : 0
+    const layer = 0
     if (layer !== this.attentionLayer) {
       this.attentionLayer = layer
       this.rebuildAttention()
@@ -569,6 +692,13 @@ export class SceneController {
     this.reducedMotion = reduced
   }
 
+  resetView() {
+    this.userControlling = false
+    this.controls.target.copy(this.cameraTarget)
+    this.controls.update()
+    this.viewModeCallback?.('follow')
+  }
+
   private resize() {
     const rect = this.canvas.getBoundingClientRect()
     const width = Math.max(1, rect.width)
@@ -579,6 +709,33 @@ export class SceneController {
   }
 
   private handlePointer = (event: PointerEvent) => {
+    this.pointerDown.set(event.clientX, event.clientY)
+    this.pointerMoved = false
+  }
+
+  private handleHover = (event: PointerEvent) => {
+    if (this.pointerMoved) return
+    if (event.buttons === 1) {
+      this.canvas.style.cursor = 'grabbing'
+      return
+    }
+    const rect = this.canvas.getBoundingClientRect()
+    this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+    this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+    this.raycaster.setFromCamera(this.pointer, this.camera)
+    const hit = this.raycaster.intersectObjects([...this.tokenMeshes, ...this.towerMeshes], false)[0]
+    this.canvas.style.cursor = hit ? 'pointer' : 'grab'
+  }
+
+  private handlePointerUp = (event: PointerEvent) => {
+    const distance = Math.hypot(event.clientX - this.pointerDown.x, event.clientY - this.pointerDown.y)
+    if (distance > 5) {
+      this.pointerMoved = true
+      window.setTimeout(() => {
+        this.pointerMoved = false
+      }, 50)
+      return
+    }
     const rect = this.canvas.getBoundingClientRect()
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
@@ -598,15 +755,6 @@ export class SceneController {
     }
   }
 
-  private handleHover = (event: PointerEvent) => {
-    const rect = this.canvas.getBoundingClientRect()
-    this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-    this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
-    this.raycaster.setFromCamera(this.pointer, this.camera)
-    const hit = this.raycaster.intersectObjects([...this.tokenMeshes, ...this.towerMeshes], false)[0]
-    this.canvas.style.cursor = hit ? 'pointer' : 'grab'
-  }
-
   private tick = () => {
     if (this.disposed) return
     this.frame += 1
@@ -623,33 +771,49 @@ export class SceneController {
       start.position[1] + (end.position[1] - start.position[1]) * blend,
       start.position[2] + (end.position[2] - start.position[2]) * blend,
     )
-    const fit = Math.max(1, 1.5 / Math.max(0.45, this.camera.aspect))
-    targetPosition.z += Math.max(0, fit - 1) * 13
+    const fit = Math.max(1, 1.15 / Math.max(0.45, this.camera.aspect))
+    targetPosition.z += Math.max(0, fit - 1) * 7
     const targetLook = new THREE.Vector3(
       start.target[0] + (end.target[0] - start.target[0]) * blend,
       start.target[1] + (end.target[1] - start.target[1]) * blend,
       start.target[2] + (end.target[2] - start.target[2]) * blend,
     )
+    if (!this.reducedMotion) {
+      targetPosition.x += Math.sin(time * 0.32) * 0.16
+      targetPosition.y += Math.sin(time * 0.47) * 0.1
+    }
     const cameraLerp = this.reducedMotion ? 1 : 0.08
-    this.cameraPosition.lerp(targetPosition, cameraLerp)
-    this.cameraTarget.lerp(targetLook, cameraLerp)
-    this.camera.position.copy(this.cameraPosition)
-    this.camera.lookAt(this.cameraTarget)
+    if (!this.userControlling) {
+      this.cameraPosition.lerp(targetPosition, cameraLerp)
+      this.cameraTarget.lerp(targetLook, cameraLerp)
+      this.camera.position.copy(this.cameraPosition)
+      this.camera.lookAt(this.cameraTarget)
+      this.controls.target.copy(this.cameraTarget)
+    } else {
+      this.controls.update()
+    }
 
     const tokenWeight = 0.55 + near(chapter, 0, 1.4) * 0.45
+    const scan = (time * 3.2) % Math.max(1, this.tokenMeshes.length)
+    const scanStrength = near(chapter, 0.5, 1.6)
     this.tokenGroup.children.forEach((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const material = (child as THREE.Mesh).material as THREE.MeshStandardMaterial
-        material.emissiveIntensity = 0.03 + tokenWeight * 0.16
+        const index = (child as THREE.Mesh).userData.index as number | undefined
+        const scanGlow =
+          typeof index === 'number' && scanStrength > 0
+            ? Math.max(0, 1 - Math.abs(index - scan) / 2) * 0.38 * scanStrength
+            : 0
+        material.emissiveIntensity = 0.03 + tokenWeight * 0.16 + scanGlow
       }
     })
     this.tokenGroup.position.y = Math.sin(time * 0.8) * 0.025
-    this.qkvGroup.visible = near(chapter, 2, 1.5) > 0.05 || chapter > 2
+    this.qkvGroup.visible = near(chapter, 2, 1.2) > 0.04
     this.qkvGroup.children.forEach((child) => {
       const material = (child as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined
       if (material?.opacity !== undefined) material.opacity = 0.12 + near(chapter, 2, 1.6) * 0.8
     })
-    this.attentionGroup.visible = near(chapter, 3, 2.1) > 0.04 || (chapter > 3 && chapter < 6.4)
+    this.attentionGroup.visible = near(chapter, 3, 1.35) > 0.04
     this.attentionGroup.children.forEach((child) => {
       const material = (child as THREE.LineSegments).material as THREE.LineBasicMaterial
       material.opacity = 0.18 + near(chapter, 3, 1.8) * 0.62
@@ -664,11 +828,13 @@ export class SceneController {
       this.residualPulse.position.copy(this.residualCurve.getPoint(pulse))
     }
     const mlpWeight = near(chapter, 5, 1.5)
-    this.mlpPlates.forEach((plates) => {
+    this.mlpPlates.forEach((plates, layer) => {
+      const plateWeight = mlpWeight * (layer === 0 ? 1 : 0.1)
       plates.forEach((plate, index) => {
+        plate.visible = plateWeight > 0.02
         const material = plate.material as THREE.MeshStandardMaterial
-        material.opacity = 0.04 + mlpWeight * (0.4 - index * 0.07)
-        plate.scale.y = 0.4 + mlpWeight * (1.8 + index * 0.35)
+        material.opacity = 0.03 + plateWeight * (0.5 - index * 0.08)
+        plate.scale.y = 0.4 + plateWeight * (2.1 + index * 0.4)
       })
     })
     this.logitsGroup.visible = chapter > 6.1
@@ -685,8 +851,10 @@ export class SceneController {
       positions.needsUpdate = true
     }
     this.flowPulses.forEach((pulse, index) => {
-      const phase = (time * 0.18 + index / this.flowPulses.length) % 1
-      pulse.position.set(Math.sin(phase * Math.PI * 2) * 0.65, 1.2 + phase * 11.2, 1.15)
+      const phase = (time * 0.16 + index / this.flowPulses.length) % 1
+      const tokenIndex = this.tokenX.length ? index % this.tokenX.length : 0
+      const x = this.tokenX[tokenIndex] ?? 0
+      pulse.position.set(x, 1.1 + phase * 11.3, 0.12)
     })
     const embeddingWeight = near(chapter, 1, 1.45)
     this.embeddingGroup.visible = embeddingWeight > 0.03
@@ -706,6 +874,32 @@ export class SceneController {
       if ('opacity' in material) material.opacity = 0.08 + sampleWeight * 0.8
     })
 
+    const focusLayer = chapter < 2 ? -1 : 0
+    this.towerMeshes.forEach((mesh, layer) => {
+      const focus = chapter >= 6 ? 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(time * 2.2 - layer * 0.9)) : near(layer, focusLayer, 0.8)
+      const material = mesh.material as THREE.MeshPhysicalMaterial
+      material.opacity = 0.08 + focus * 0.2
+      material.emissiveIntensity = focus * 0.18
+      material.emissive.set(0x6d9bd1)
+    })
+    this.columnNodes.forEach((nodes, layer) => {
+      const stackWave = 0.5 + 0.5 * Math.sin(time * 2.2 - layer * 0.9)
+      const focus = chapter >= 6 ? stackWave : near(layer, focusLayer, 0.75)
+      nodes.forEach((node) => {
+        const material = node.material as THREE.MeshStandardMaterial
+        material.emissiveIntensity = 0.12 + focus * 0.95
+        node.scale.setScalar(0.85 + focus * 0.9)
+      })
+    })
+    this.attentionBeadGroup.visible = this.attentionGroup.visible
+    this.attentionBeads.forEach((bead) => {
+      const progress = (time * 0.38 + bead.offset) % 1
+      bead.mesh.position.copy(bead.curve.getPoint(progress))
+      const material = bead.mesh.material as THREE.MeshStandardMaterial
+      material.opacity = 0.15 + near(chapter, 3, 2) * 0.8
+      bead.mesh.scale.setScalar(0.75 + Math.sin(time * 4 + bead.offset * 8) * 0.15)
+    })
+
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -713,8 +907,12 @@ export class SceneController {
     this.disposed = true
     this.renderer.setAnimationLoop(null)
     this.resizeObserver.disconnect()
+    this.controls.removeEventListener('start', this.handleOrbitStart)
+    this.controls.dispose()
+    this.canvas.removeEventListener('wheel', this.handleWheel, { capture: true })
     this.canvas.removeEventListener('pointerdown', this.handlePointer)
     this.canvas.removeEventListener('pointermove', this.handleHover)
+    this.canvas.removeEventListener('pointerup', this.handlePointerUp)
     this.scene.traverse((object) => {
       const mesh = object as THREE.Mesh
       mesh.geometry?.dispose()

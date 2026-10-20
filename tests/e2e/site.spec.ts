@@ -29,6 +29,20 @@ test.describe('Transformer 内部漫游', () => {
     await expect(page.getByRole('heading', { name: /Q \/ K \/ V/ })).toBeVisible()
   })
 
+  test('dragging the scene enters free orbit and can return to follow mode', async ({ page }) => {
+    await page.goto('/walkthrough')
+    await page.waitForTimeout(1200)
+    const box = await page.locator('canvas').first().boundingBox()
+    expect(box).not.toBeNull()
+    await page.mouse.move(box!.x + box!.width * 0.5, box!.y + box!.height * 0.15)
+    await page.mouse.down()
+    await page.mouse.move(box!.x + box!.width * 0.62, box!.y + box!.height * 0.26, { steps: 8 })
+    await page.mouse.up()
+    await expect(page.getByRole('button', { name: '回到跟随镜头' })).toBeVisible()
+    await page.getByRole('button', { name: '回到跟随镜头' }).click()
+    await expect(page.getByRole('button', { name: '回到跟随镜头' })).toHaveCount(0)
+  })
+
   test('attention lab recalculates a real 4x4-head trace', async ({ page }) => {
     await page.goto('/lab/attention')
     await expect(page.getByText(/当前输入/)).toBeVisible({ timeout: 20_000 })

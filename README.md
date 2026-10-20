@@ -8,6 +8,8 @@
 
 - `/`：首页，自动循环的 3D 微演示与两个入口。
 - `/walkthrough`：9 章滚动叙事主线；进入后自动播放第一段，滚动或点击即接管。
+  3D 画面可直接拖动旋转，`Ctrl + 滚轮` 缩放，拖动后出现“回到跟随镜头”；
+  手机端提供“全屏 3D”开关。
 - `/lab/attention`：注意力显微镜，选层、选头、选查询位置看真实权重。
 - `/lab/kv-cache`：KV cache 账本，对比全量重算与缓存复用的计算量和显存。
 - `/lab/sampling`：温度采样器，调 temperature / top-k / seed 并生成字符。
@@ -42,6 +44,9 @@ Tiny Shakespeare 4L：
 React 19 + TypeScript + Vite + Three.js + Tailwind CSS v4 + React Router。
 3D 场景封装在 `SceneController` 中，与 React 状态解耦；模型推理放在
 `src/engine/worker.ts`，通过 `Float32Array` 在前向过程中暴露每一层中间张量。
+
+场景里每个 token 有一根贯穿四层的竖柱，柱上的节点表示该 token 在对应层的表示；
+拖动可以绕模型自由观察，滚动仍负责推进章节。
 
 ## 本地运行
 

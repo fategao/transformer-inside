@@ -9,6 +9,9 @@ type Props = {
   fallbackLabel?: string
   autoCycle?: boolean
   reducedMotion?: boolean
+  onUserInteract?: () => void
+  onViewModeChange?: (mode: 'follow' | 'free') => void
+  followToken?: number
 }
 
 export function SceneCanvas({
@@ -19,15 +22,27 @@ export function SceneCanvas({
   fallbackLabel,
   autoCycle = false,
   reducedMotion = false,
+  onUserInteract,
+  onViewModeChange,
+  followToken = 0,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const controllerRef = useRef<SceneController | null>(null)
+  const autoPausedRef = useRef(false)
   const [unsupported, setUnsupported] = useState(false)
 
   useEffect(() => {
     if (!canvasRef.current) return
     try {
-      const controller = new SceneController(canvasRef.current, { onSelect, reducedMotion })
+      const controller = new SceneController(canvasRef.current, {
+        onSelect,
+        reducedMotion,
+        onUserInteract: () => {
+          autoPausedRef.current = true
+          onUserInteract?.()
+        },
+        onViewModeChange,
+      })
       controllerRef.current = controller
       controller.setData(data)
       controller.setChapter(chapter)
@@ -56,12 +71,17 @@ export function SceneCanvas({
   }, [reducedMotion])
 
   useEffect(() => {
+    if (followToken > 0) controllerRef.current?.resetView()
+  }, [followToken])
+
+  useEffect(() => {
     if (!autoCycle) return
+    autoPausedRef.current = false
     let frame = 0
     const start = performance.now()
     const tick = (now: number) => {
       const phase = ((now - start) / 26000) % 1
-      controllerRef.current?.setChapter(phase * 8)
+      if (!autoPausedRef.current) controllerRef.current?.setChapter(phase * 8)
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)

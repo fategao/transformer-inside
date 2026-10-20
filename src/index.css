@@ -601,6 +601,7 @@ a {
 .walkthrough-section {
   position: relative;
   z-index: 2;
+  pointer-events: none;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -613,6 +614,7 @@ a {
 
 .chapter-card {
   width: min(520px, 92vw);
+  pointer-events: auto;
   max-height: calc(100vh - 190px);
   overflow-y: auto;
   scrollbar-width: thin;
@@ -825,7 +827,30 @@ a {
   right: 22px;
   z-index: 20;
   display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+.scene-toolbar__hint {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(251, 249, 243, 0.78);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.mobile-scene-hint {
+  display: none;
+}
+
+.mobile-follow-button {
+  display: none;
+}
+
+.scene-only-toggle {
+  display: none;
 }
 
 .scene-toolbar button {
@@ -1654,6 +1679,68 @@ a {
   }
 
   .scene-toolbar {
+    display: none;
+  }
+
+  .mobile-scene-hint {
+    display: block;
+    position: fixed;
+    top: 78px;
+    right: 12px;
+    z-index: 20;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(251, 249, 243, 0.84);
+    color: var(--muted);
+    font-size: 9.5px;
+    backdrop-filter: blur(8px);
+    pointer-events: none;
+  }
+
+  .mobile-follow-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 112px;
+    right: 12px;
+    z-index: 25;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: rgba(251, 249, 243, 0.92);
+    color: var(--ink);
+    font-size: 10px;
+    backdrop-filter: blur(8px);
+  }
+
+  .scene-only-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 78px;
+    left: 12px;
+    z-index: 25;
+    min-height: 30px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(251, 249, 243, 0.9);
+    color: var(--ink-soft);
+    font-size: 10px;
+    backdrop-filter: blur(8px);
+  }
+
+  .walkthrough.is-scene-only .walkthrough-section {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .walkthrough.is-scene-only .mobile-scene-hint {
     display: none;
   }
 

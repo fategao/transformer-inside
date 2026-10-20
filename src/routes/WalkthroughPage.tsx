@@ -22,6 +22,9 @@ export function WalkthroughPage() {
   const [mode, setMode] = useState<Mode>(initialHash ? 'paused' : 'auto')
   const [chapterFloat, setChapterFloat] = useState(initialIndex)
   const [selection, setSelection] = useState<Selection>(null)
+  const [viewMode, setViewMode] = useState<'follow' | 'free'>('follow')
+  const [followToken, setFollowToken] = useState(0)
+  const [sceneOnly, setSceneOnly] = useState(false)
   const modeRef = useRef(mode)
   const chapterFloatRef = useRef(chapterFloat)
   const autoScrollTopRef = useRef(-1)
@@ -46,6 +49,8 @@ export function WalkthroughPage() {
       const target = Math.round(clamp(index))
       setMode('paused')
       setChapterFloat(target)
+      setViewMode('follow')
+      setFollowToken((value) => value + 1)
       window.scrollTo({ top: target * window.innerHeight, behavior: reduced ? 'auto' : 'smooth' })
     },
     [reduced],
@@ -126,23 +131,53 @@ export function WalkthroughPage() {
   const selectedToken = selection?.kind === 'token' ? selection.index : trace ? trace.seq - 1 : 0
 
   return (
-    <div className="walkthrough">
+    <div className={`walkthrough ${sceneOnly ? 'is-scene-only' : ''}`}>
       <SceneCanvas
         data={sceneData}
         chapter={chapterFloat}
         reducedMotion={reduced}
         className="walkthrough-canvas"
         onSelect={setSelection}
+        onUserInteract={() => setMode('user')}
+        onViewModeChange={setViewMode}
+        followToken={followToken}
         fallbackLabel="Transformer 前向传播 3D 场景"
       />
       <div className="scene-toolbar">
+        <span className="scene-toolbar__hint">拖动旋转 · Ctrl + 滚轮缩放 · 竖柱 = 同一 token 跨层</span>
         <button type="button" onClick={() => goTo(6)}>
           总览 4 层
         </button>
-        <button type="button" onClick={() => goTo(activeIndex)}>
-          跟随当前章
-        </button>
+        {viewMode === 'free' ? (
+          <button type="button" onClick={() => setFollowToken((value) => value + 1)}>
+            回到跟随镜头
+          </button>
+        ) : (
+          <button type="button" onClick={() => goTo(activeIndex)}>
+            跟随当前章
+          </button>
+        )}
       </div>
+      <div className="mobile-scene-hint">拖动旋转 · 双指缩放 · 竖柱 = 跨层 token</div>
+      <button
+        type="button"
+        className="scene-only-toggle"
+        onClick={() => {
+          if (!sceneOnly) goTo(6)
+          setSceneOnly((value) => !value)
+        }}
+      >
+        {sceneOnly ? '显示讲解' : '全屏 3D'}
+      </button>
+      {viewMode === 'free' && (
+        <button
+          type="button"
+          className="mobile-follow-button"
+          onClick={() => setFollowToken((value) => value + 1)}
+        >
+          回到跟随镜头
+        </button>
+      )}
 
       {chapters.map((chapter) => (
         <section className="walkthrough-section" id={chapter.id} key={chapter.id} aria-labelledby={`${chapter.id}-title`}>
