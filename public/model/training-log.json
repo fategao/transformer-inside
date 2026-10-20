@@ -1,0 +1,14 @@
+{
+  "steps": 5000,
+  "batchSize": 64,
+  "blockSize": 64,
+  "learningRate": 0.0003,
+  "seed": 1337,
+  "device": "cuda",
+  "trainLoss": 1.40835,
+  "valLoss": 1.60567,
+  "parameterCount": 809856,
+  "corpusCharacters": 1115394,
+  "corpusSha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+  "trainingSeconds": 133.5
+}

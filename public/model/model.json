@@ -1,0 +1,535 @@
+{
+  "name": "Tiny Shakespeare 4L",
+  "config": {
+    "vocabSize": 65,
+    "contextLength": 64,
+    "nLayer": 4,
+    "nHead": 4,
+    "dModel": 128,
+    "dFF": 512
+  },
+  "vocab": [
+    "\n",
+    " ",
+    "!",
+    "$",
+    "&",
+    "'",
+    ",",
+    "-",
+    ".",
+    "3",
+    ":",
+    ";",
+    "?",
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z"
+  ],
+  "tokenizer": "character",
+  "weights": {
+    "file": "weights.bin",
+    "dtype": "float32",
+    "sha256": "64ae9017dbce0aae6815de6611db4d78425001fad4a8fe589c79ebd54be2cf76",
+    "tensors": [
+      {
+        "name": "tok_emb.weight",
+        "shape": [
+          65,
+          128
+        ],
+        "offset": 0,
+        "count": 8320
+      },
+      {
+        "name": "pos_emb.weight",
+        "shape": [
+          64,
+          128
+        ],
+        "offset": 8320,
+        "count": 8192
+      },
+      {
+        "name": "blocks.0.ln1.weight",
+        "shape": [
+          128
+        ],
+        "offset": 16512,
+        "count": 128
+      },
+      {
+        "name": "blocks.0.ln1.bias",
+        "shape": [
+          128
+        ],
+        "offset": 16640,
+        "count": 128
+      },
+      {
+        "name": "blocks.0.attn.qkv.weight",
+        "shape": [
+          384,
+          128
+        ],
+        "offset": 16768,
+        "count": 49152
+      },
+      {
+        "name": "blocks.0.attn.qkv.bias",
+        "shape": [
+          384
+        ],
+        "offset": 65920,
+        "count": 384
+      },
+      {
+        "name": "blocks.0.attn.proj.weight",
+        "shape": [
+          128,
+          128
+        ],
+        "offset": 66304,
+        "count": 16384
+      },
+      {
+        "name": "blocks.0.attn.proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 82688,
+        "count": 128
+      },
+      {
+        "name": "blocks.0.ln2.weight",
+        "shape": [
+          128
+        ],
+        "offset": 82816,
+        "count": 128
+      },
+      {
+        "name": "blocks.0.ln2.bias",
+        "shape": [
+          128
+        ],
+        "offset": 82944,
+        "count": 128
+      },
+      {
+        "name": "blocks.0.fc.weight",
+        "shape": [
+          512,
+          128
+        ],
+        "offset": 83072,
+        "count": 65536
+      },
+      {
+        "name": "blocks.0.fc.bias",
+        "shape": [
+          512
+        ],
+        "offset": 148608,
+        "count": 512
+      },
+      {
+        "name": "blocks.0.mlp_proj.weight",
+        "shape": [
+          128,
+          512
+        ],
+        "offset": 149120,
+        "count": 65536
+      },
+      {
+        "name": "blocks.0.mlp_proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 214656,
+        "count": 128
+      },
+      {
+        "name": "blocks.1.ln1.weight",
+        "shape": [
+          128
+        ],
+        "offset": 214784,
+        "count": 128
+      },
+      {
+        "name": "blocks.1.ln1.bias",
+        "shape": [
+          128
+        ],
+        "offset": 214912,
+        "count": 128
+      },
+      {
+        "name": "blocks.1.attn.qkv.weight",
+        "shape": [
+          384,
+          128
+        ],
+        "offset": 215040,
+        "count": 49152
+      },
+      {
+        "name": "blocks.1.attn.qkv.bias",
+        "shape": [
+          384
+        ],
+        "offset": 264192,
+        "count": 384
+      },
+      {
+        "name": "blocks.1.attn.proj.weight",
+        "shape": [
+          128,
+          128
+        ],
+        "offset": 264576,
+        "count": 16384
+      },
+      {
+        "name": "blocks.1.attn.proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 280960,
+        "count": 128
+      },
+      {
+        "name": "blocks.1.ln2.weight",
+        "shape": [
+          128
+        ],
+        "offset": 281088,
+        "count": 128
+      },
+      {
+        "name": "blocks.1.ln2.bias",
+        "shape": [
+          128
+        ],
+        "offset": 281216,
+        "count": 128
+      },
+      {
+        "name": "blocks.1.fc.weight",
+        "shape": [
+          512,
+          128
+        ],
+        "offset": 281344,
+        "count": 65536
+      },
+      {
+        "name": "blocks.1.fc.bias",
+        "shape": [
+          512
+        ],
+        "offset": 346880,
+        "count": 512
+      },
+      {
+        "name": "blocks.1.mlp_proj.weight",
+        "shape": [
+          128,
+          512
+        ],
+        "offset": 347392,
+        "count": 65536
+      },
+      {
+        "name": "blocks.1.mlp_proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 412928,
+        "count": 128
+      },
+      {
+        "name": "blocks.2.ln1.weight",
+        "shape": [
+          128
+        ],
+        "offset": 413056,
+        "count": 128
+      },
+      {
+        "name": "blocks.2.ln1.bias",
+        "shape": [
+          128
+        ],
+        "offset": 413184,
+        "count": 128
+      },
+      {
+        "name": "blocks.2.attn.qkv.weight",
+        "shape": [
+          384,
+          128
+        ],
+        "offset": 413312,
+        "count": 49152
+      },
+      {
+        "name": "blocks.2.attn.qkv.bias",
+        "shape": [
+          384
+        ],
+        "offset": 462464,
+        "count": 384
+      },
+      {
+        "name": "blocks.2.attn.proj.weight",
+        "shape": [
+          128,
+          128
+        ],
+        "offset": 462848,
+        "count": 16384
+      },
+      {
+        "name": "blocks.2.attn.proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 479232,
+        "count": 128
+      },
+      {
+        "name": "blocks.2.ln2.weight",
+        "shape": [
+          128
+        ],
+        "offset": 479360,
+        "count": 128
+      },
+      {
+        "name": "blocks.2.ln2.bias",
+        "shape": [
+          128
+        ],
+        "offset": 479488,
+        "count": 128
+      },
+      {
+        "name": "blocks.2.fc.weight",
+        "shape": [
+          512,
+          128
+        ],
+        "offset": 479616,
+        "count": 65536
+      },
+      {
+        "name": "blocks.2.fc.bias",
+        "shape": [
+          512
+        ],
+        "offset": 545152,
+        "count": 512
+      },
+      {
+        "name": "blocks.2.mlp_proj.weight",
+        "shape": [
+          128,
+          512
+        ],
+        "offset": 545664,
+        "count": 65536
+      },
+      {
+        "name": "blocks.2.mlp_proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 611200,
+        "count": 128
+      },
+      {
+        "name": "blocks.3.ln1.weight",
+        "shape": [
+          128
+        ],
+        "offset": 611328,
+        "count": 128
+      },
+      {
+        "name": "blocks.3.ln1.bias",
+        "shape": [
+          128
+        ],
+        "offset": 611456,
+        "count": 128
+      },
+      {
+        "name": "blocks.3.attn.qkv.weight",
+        "shape": [
+          384,
+          128
+        ],
+        "offset": 611584,
+        "count": 49152
+      },
+      {
+        "name": "blocks.3.attn.qkv.bias",
+        "shape": [
+          384
+        ],
+        "offset": 660736,
+        "count": 384
+      },
+      {
+        "name": "blocks.3.attn.proj.weight",
+        "shape": [
+          128,
+          128
+        ],
+        "offset": 661120,
+        "count": 16384
+      },
+      {
+        "name": "blocks.3.attn.proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 677504,
+        "count": 128
+      },
+      {
+        "name": "blocks.3.ln2.weight",
+        "shape": [
+          128
+        ],
+        "offset": 677632,
+        "count": 128
+      },
+      {
+        "name": "blocks.3.ln2.bias",
+        "shape": [
+          128
+        ],
+        "offset": 677760,
+        "count": 128
+      },
+      {
+        "name": "blocks.3.fc.weight",
+        "shape": [
+          512,
+          128
+        ],
+        "offset": 677888,
+        "count": 65536
+      },
+      {
+        "name": "blocks.3.fc.bias",
+        "shape": [
+          512
+        ],
+        "offset": 743424,
+        "count": 512
+      },
+      {
+        "name": "blocks.3.mlp_proj.weight",
+        "shape": [
+          128,
+          512
+        ],
+        "offset": 743936,
+        "count": 65536
+      },
+      {
+        "name": "blocks.3.mlp_proj.bias",
+        "shape": [
+          128
+        ],
+        "offset": 809472,
+        "count": 128
+      },
+      {
+        "name": "ln_f.weight",
+        "shape": [
+          128
+        ],
+        "offset": 809600,
+        "count": 128
+      },
+      {
+        "name": "ln_f.bias",
+        "shape": [
+          128
+        ],
+        "offset": 809728,
+        "count": 128
+      }
+    ]
+  },
+  "training": {
+    "steps": 5000,
+    "batchSize": 64,
+    "blockSize": 64,
+    "learningRate": 0.0003,
+    "seed": 1337,
+    "device": "cuda",
+    "trainLoss": 1.40835,
+    "valLoss": 1.60567,
+    "parameterCount": 809856,
+    "corpusCharacters": 1115394,
+    "corpusSha256": "86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed",
+    "trainingSeconds": 133.5
+  },
+  "sample": "ROMEO: sir; become\nwill beat a sorrow\nbacks and explent them. Sir, give he we happen'd him to be\nwere home, away, my faces are zuton,\nYour proceed the confirend to cause,\nYet be content Hereful by Saint Warwick on your spelling appare\nHis receiver"
+}
