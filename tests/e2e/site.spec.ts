@@ -21,17 +21,16 @@ test.describe('Transformer 内部漫游', () => {
     await expect(page.getByRole('heading', { name: /Q \/ K \/ V/ })).toBeVisible()
   })
 
-  test('autoplay moves the scene and hands control to scrolling', async ({ page }) => {
+  test('autoplay starts and the user can pause it', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
     await page.goto('/walkthrough')
-    await expect
-      .poll(async () => page.evaluate(() => window.scrollY), { timeout: 6000, intervals: [200, 400, 800] })
-      .toBeGreaterThan(0)
-    await page.mouse.wheel(0, 2400)
-    await page.waitForTimeout(700)
-    await expect(page.getByRole('heading', { name: /Q \/ K \/ V/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: '暂停自动播放' })).toBeVisible()
+    await page.getByRole('button', { name: '暂停自动播放' }).click()
+    await expect(page.getByRole('button', { name: '继续自动播放' })).toBeVisible()
   })
 
-  test('dragging the scene enters free orbit and can return to follow mode', async ({ page }) => {
+  test('dragging the scene enters free orbit and can return to follow mode', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === 'mobile', 'mobile uses the full-screen 3D control test')
     await page.goto('/walkthrough')
     await page.waitForTimeout(1200)
     await page.keyboard.press('Space')
@@ -45,6 +44,14 @@ test.describe('Transformer 内部漫游', () => {
     await expect(page.getByRole('button', { name: '回到跟随镜头' })).toBeVisible()
     await page.getByRole('button', { name: '回到跟随镜头' }).click({ force: true })
     await expect(page.getByRole('button', { name: '回到跟随镜头' })).toHaveCount(0)
+  })
+
+  test('mobile full-screen control keeps the complete 3D scene available', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile', 'mobile-only layout behavior')
+    await page.goto('/walkthrough')
+    await page.getByRole('button', { name: '全屏 3D' }).click()
+    await expect(page.getByRole('button', { name: '显示讲解' })).toBeVisible()
+    await expect(page.locator('#tokenization')).toHaveCSS('visibility', 'hidden')
   })
 
   test('attention lab recalculates a real 4x4-head trace', async ({ page }) => {
